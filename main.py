@@ -10,7 +10,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from dotenv import load_dotenv
 
-from parsing import get_schedule
+from parsing import get_schedule, get_schedule_next
 
 from datetime import datetime
 
@@ -55,15 +55,17 @@ async def schedule_today(message: Message) -> None:
 async def schedule_tomorrow(message: Message) -> None:
     await message.answer("⏳ Подождите, идет загрузка...")
     
-    schedule = get_schedule()
     today = datetime.today().weekday()
     
-    if today == 6:  # Воскресенье
-        tomorrow = 0  # Понедельник
-    elif today == 5:  # Суббота
+    if today == 6:  # Воскресенье - используем следующую неделю
+        schedule = get_schedule_next()
         tomorrow = 0  # Понедельник
     else:
-        tomorrow = today + 1
+        schedule = get_schedule()
+        if today == 5:  # Суббота
+            tomorrow = 0  # Понедельник
+        else:
+            tomorrow = today + 1
 
     schedule_with_time = []
     for i, subject in enumerate(schedule[tomorrow]):

@@ -118,46 +118,44 @@ def get_schedule():
 
         
 def get_schedule_next():
-    
     o = Options()
     o.add_experimental_option("detach", True)
-
-    driver = webdriver.Chrome(options=o) 
-
+    driver = webdriver.Chrome(options=o)
+    
     driver.get("https://my.tyuiu.ru/")
-
-
+    
     element = driver.find_element(By.ID, "email")
-    element.send_keys(getenv("LOGIN")) # type: ignore
-
-
+    element.send_keys(getenv("LOGIN"))
+    
     element = driver.find_element(By.ID, "password")
-    element.send_keys(getenv("PASSWORD")) # type: ignore
-
-
+    element.send_keys(getenv("PASSWORD"))
+    
     button_element = driver.find_element(By.NAME, "login")
     button_element.click()
-
-    driver.get(getenv("URL_SCHEDULE")) # type: ignore
-
-    # Нажимаем кнопку "Следующая неделя"
-    next_week_button = driver.find_element(By.CLASS_NAME, "btn-next-week")
-    next_week_button.click()
-
+    
+    driver.get(getenv("URL_SCHEDULE"))
+    
     soup = BeautifulSoup(driver.page_source, "lxml")
-
-    week = soup.find("div", class_= "my-schedule-table-wrapper")
-
-    week = week.find_all("div", class_= "table-cell-event")# type: ignore
-
-
+    
+    schedule_tables = soup.find_all("div", class_="my-schedule-table")
+    
+    if len(schedule_tables) == 0:
+        # Если таблицы не найдены, возвращаем пустое расписание
+        driver.quit()
+        return [["Нет пары" for _ in range(8)] for _ in range(6)]
+    elif len(schedule_tables) > 1:
+        week = schedule_tables[1].find_all("div", class_="table-cell-event")
+    else:
+        week = schedule_tables[0].find_all("div", class_="table-cell-event")
+    
     schedule = [[], [], [], [], [], [], [], []]
-
+    
     for i in range(8):
         for j in range(6):
-            schedule[j].append(week[i*6 + j].text)
-
-    
+            if i*6 + j < len(week):
+                schedule[j].append(week[i*6 + j].text)
+            else:
+                schedule[j].append("")
     
     for i in range(6):
         for j in range(8):
@@ -170,7 +168,6 @@ def get_schedule_next():
             elif schedule[i][j] != "Нет пары":
                 text = schedule[i][j]
                 
-                # Отделяем тип занятия
                 lesson_type = ""
                 if "Лекция" in text:
                     lesson_type = "Лекция"
@@ -182,7 +179,6 @@ def get_schedule_next():
                     lesson_type = "Лабораторная"
                     text = text.replace("Лабораторная", "").strip()
                 
-                # Простое разделение по ключевым словам
                 parts = text.split()
                 subject_parts = []
                 corpus_parts = []
@@ -208,7 +204,6 @@ def get_schedule_next():
                 corpus = " ".join(corpus_parts)
                 fio = " ".join(fio_parts)
                 
-                # Формируем результат
                 result_parts = []
                 if subject:
                     result_parts.append(subject)
